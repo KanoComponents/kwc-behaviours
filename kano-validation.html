@@ -64,6 +64,19 @@
                 this.set('errors.email', undefined);
                 return true;
             }
+            /**
+             * Set relevant error if the terms have not been agreed to.
+             * @param {Boolean} terms
+             * @returns {Boolean}
+             */
+            validateTerms (terms) {
+                if (terms) {
+                    this.set('errors.terms', null);
+                } else {
+                    this.set('errors.terms', 'Please agree to the terms and conditions');
+                }
+                return terms;
+            }
         }
         /** @polymerBehavior Kano.Validation.Behaviour */
         Kano.Validation.Behaviour = {
@@ -120,6 +133,21 @@
 
                 this.set('errors.email', undefined);
                 return true;
+            },
+            /**
+             * Set relevant error if the terms have not been agreed to.
+             * @param {Boolean} terms
+             * @returns {Boolean}
+             */
+            validateTerms (terms) {
+                console.log("Validate Terms", terms);
+                if (terms) {
+                    this.set('errors.terms', null);
+                    console.log(this.errors.terms);
+                } else {
+                    this.set('errors.terms', 'Please agree to the terms and conditions');
+                }
+                return terms;
             }
         }
     })(window.Kano = window.Kano || {});
