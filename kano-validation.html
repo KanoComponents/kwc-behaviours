@@ -140,10 +140,8 @@
              * @returns {Boolean}
              */
             validateTerms (terms) {
-                console.log("Validate Terms", terms);
                 if (terms) {
                     this.set('errors.terms', null);
-                    console.log(this.errors.terms);
                 } else {
                     this.set('errors.terms', 'Please agree to the terms and conditions');
                 }
