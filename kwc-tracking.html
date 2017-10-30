@@ -20,11 +20,6 @@
              */
             let browserId,
                 /**
-                 * The interval ID of the listener for errors
-                 * @type {Number}
-                 */
-                errorListener,
-                /**
                  * The user's current kit serial number (Kano 2 app only
                  * @type {String}
                  */
@@ -103,11 +98,6 @@
                  */
                 timezoneOffset,
                 /**
-                 * The interval ID of the listener for tracking events
-                 * @type {Number}
-                 */
-                trackingListener,
-                /**
                  * The user's auth token
                  * @type {String}
                  */
@@ -176,7 +166,7 @@
                     _tokenChanged(e);
                 }
                 if (e.detail.path) {
-                    _trackPageView(e);  
+                    _trackPageView(e);
                 }
                 let storedLocation = localStorage.getItem(LOCATION_KEY);
                 if (!storedLocation || storedLocation === 'Unkown') {
@@ -469,17 +459,18 @@
                 return class TrackingComponent extends parent {
                     connectedCallback () {
                         super.connectedCallback();
-                        trackingListener = window.addEventListener('tracking-event', (e) => _trackBasicEvent(e));
-                        trackingListener = window.addEventListener('page-view', (e) => _trackPageView(e));
-                        trackingListener = window.addEventListener('token-changed', (e) => _tokenChanged(e));
-                        errorListener = window.addEventListener('error-event', (e) => _trackUserError(e));
-                        errorListener = window.addEventListener('initialize-tracking', (e) => _initializeTracking(e));
+                        window.addEventListener('tracking-event', _trackBasicEvent);
+                        window.addEventListener('page-view', _trackPageView);
+                        window.addEventListener('token-changed', _tokenChanged);
+                        window.addEventListener('error-event', _trackUserError);
+                        window.addEventListener('initialize-tracking', _initializeTracking);
                     }
                     disconnectedCallback() {
-                        window.removeEventListener('tracking-event', trackingListener);
+                        window.removeEventListener('tracking-event', _trackBasicEvent);
                         window.removeEventListener('page-view', _trackPageView);
                         window.removeEventListener('token-changed', _tokenChanged);
-                        window.removeEventListener('error-event', errorListener);
+                        window.removeEventListener('error-event', _trackUserError);
+                        window.removeEventListener('initialize-tracking', _initializeTracking);
                         _clearQueueDispatch();
                     }
                 }
