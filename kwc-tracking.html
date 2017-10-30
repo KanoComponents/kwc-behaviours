@@ -1,0 +1,511 @@
+<script src="../js-md5/build/md5.min.js"></script>
+<script src="../platform.js/platform.js"></script>
+
+<script>
+    (Kano => {
+        Kano.Behaviors = Kano.Behaviors || {};
+        Kano.Behaviors.Tracking = (config) => {
+            /** Expire the session after 30 minutes of inactivity */
+            const DEFAULT_SESSION_LENGTH = 30 * 60 * 1000,
+                  /** Process the queue every 5 seconds */
+                  DEFAULT_QUEUE_LENGTH = 5 * 1000,
+                  BROWSER_KEY = 'KANO-TRACKING-BROWSER-ID',
+                  SESSION_KEY = 'KANO-TRACKING-SESSION-ID',
+                  SCHEMA_KEY = 'KANO-TRACKING-SCHEMA',
+                  LOCATION_KEY = 'KANO-TRACKING-LOCATION';
+
+            /**
+             * The (hopefully) unique ID for the user's browser
+             * @type {String}
+             */
+            let browserId,
+                /**
+                 * The user's current kit serial number (Kano 2 app only
+                 * @type {String}
+                 */
+                kitId,
+                /**
+                 * The timestamp of the last event queued
+                 * @type {Date}
+                 */
+                lastUpdate,
+                /**
+                 * The user's location
+                 * @type {String}
+                 */
+                location,
+                /**
+                 * The user's device mode (Kano 2 app only)
+                 * @type {String}
+                 */
+                mode,
+                /**
+                 * The user's OS details
+                 * @type {Object}
+                 */
+                os,
+                /**
+                 * The current URL path
+                 * @type {String}
+                 */
+                path,
+                /**
+                 * The user's device mode (Kano 2 app only)
+                 * @type {Boolean}
+                 */
+                previousSession = false,
+                /**
+                 * The queue of tracking events to be sent to the API
+                 * @type {Array}
+                 */
+                queue = [],
+                /**
+                 * The number of miliseconds to wait before dispatching the
+                 * current queue
+                 * @type {Number}
+                 */
+                queueLength = config.QUEUE_LENGTH || DEFAULT_QUEUE_LENGTH,
+                /**
+                 * The interval ID of the queue scheduler
+                 * @type {Number}
+                 */
+                queueInterval,
+                /**
+                 * The API schema to use for recording the events
+                 * @type {String}
+                 */
+                schema,
+                /**
+                 * The (hopefully) unique ID for the user's curent session
+                 * @type {String}
+                 */
+                sessionId,
+                /**
+                 * The number of miliseconds of inactivity before the session
+                 * is considered to have expired, and will be restarted if
+                 * another event occurs
+                 * @type {Number}
+                 */
+                sessionLength = config.SESSION_LENGTH || DEFAULT_SESSION_LENGTH,
+                /**
+                 * Whether the session has been started or not
+                 * @type {Boolean}
+                 */
+                sessionStarted = false,
+                /**
+                 * The user's timezone offset
+                 * @type {Number}
+                 */
+                timezoneOffset,
+                /**
+                 * The user's auth token
+                 * @type {String}
+                 */
+                token;
+
+            /**
+             * Clear the interval for the queue scheduler and clear the queue
+             */
+            function _clearQueueDispatch () {
+                window.clearInterval(queueInterval);
+                _dispatchQueue();
+            }
+            /** Dispatch the event queue to the API */
+            function _dispatchQueue () {
+                if (!queue.length) {
+                    return;
+                }
+                let headers = new Headers({
+                        'Content-Type': 'application/json'
+                    }),
+                    cache = queue;
+                queue = [];
+                fetch(`${config.API_URL}/track/${schema}`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(cache)
+                }).catch(err => {
+                    _log(err);
+                    /** If the request has failed, reinsert the failed queue */
+                    queue.splice(0, 0, cache);
+                });
+            }
+            /**
+             * Console.log the `item` if the debug option has been set
+             * @param {String} item
+             */
+            function _log (item) {
+                if (config.DEBUG) {
+                    console.log(item);
+                }
+            }
+            /**
+             * Retrieve the user's current location from the Geo API
+             * @returns {Promise}
+             */
+            function _getLocation () {
+                return fetch(config.GEO_API)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response.Country.Names.en;
+                    }).catch((error) => {
+                        return 'Unknown';
+                    });
+            }
+            /**
+             * Ensure that all the relevent information is set (including the
+             * token if supplied) and start the session
+             * @param {Event} e
+             */
+            function _initializeTracking (e) {
+                _setSchema();
+                _setIds();
+                _setOs();
+                _setTimezoneOffset();
+                if (e.detail.token) {
+                    _tokenChanged(e);
+                }
+                if (e.detail.path) {
+                    _trackPageView(e);
+                }
+                let storedLocation = localStorage.getItem(LOCATION_KEY);
+                if (!storedLocation || storedLocation === 'Unkown') {
+                    _getLocation().then(response => {
+                        location = response;
+                        localStorage.setItem(LOCATION_KEY, response);
+                        _startSession();
+                    });
+                } else {
+                    location = storedLocation;
+                    _startSession();
+                }
+            }
+            /**
+             * Format an event with the correct information and add to the queue
+             * @param {Object} payload
+             */
+            function _queueEvent (payload) {
+                let sessionExpired = _sessionExpired(lastUpdate);
+                if (sessionExpired && sessionStarted) {
+                    return _restartSession(payload);
+                }
+                let body = {
+                    app_id: config.APP_ID,
+                    app_version: config.VERSION,
+                    browser_id: browserId,
+                    page_path: path || '',
+                    session_id: sessionId,
+                    name: payload.name,
+                    os: os.name,
+                    os_version: os.version,
+                    time: parseInt(Date.now() / 1000),
+                    timezone_offset: timezoneOffset
+                };
+                if (token) {
+                    headers.append('Authorization', token);
+                } else if (payload.token) {
+                    /**
+                     * If a token has been passed through with the event
+                     * details, use this as a backup token to identify events
+                     * with a user
+                     */
+                    headers.append('Authorization', payload.token);
+                }
+                if (kitId) {
+                    body.kitId = kitId;
+                }
+                if (mode) {
+                    body.mode = mode;
+                }
+                if (payload.data) {
+                    body.data = payload.data;
+                }
+                _log('Tracking event: ' + payload.name);
+                _log(body);
+                queue.push(body);
+                lastUpdate = Date.now();
+            }
+            /**
+             * Generate a new sessionId for the new session, and reset all
+             * previous details
+             * @param {Object} restartEvent An event to add to the queue after
+             *                              restarting the session
+             */
+            function _restartSession (restartEvent) {
+                let idString = window.navigator.userAgent + Date.now().toString(),
+                    hashedId = md5(idString);
+                sessionId = hashedId;
+                sessionStorage.setItem(SESSION_KEY, hashedId);
+                sessionStarted = false;
+                previousSession = false;
+                _startSession(restartEvent);
+            }
+            /** Set an interval to dispatch the event queue */
+            function _scheduleQueueDispatch () {
+                queueInterval = window.setInterval(_dispatchQueue, queueLength);
+            }
+            /** Set the schema - either from the localStorage or the config */
+            function _setSchema () {
+                /**
+                 * When using Kano Code within the Electron app, we want to be
+                 * able to provide the app's schema in place of the default
+                 * schema
+                 */
+                schema = localStorage.getItem(SCHEMA_KEY) || config.TRACKING.SCHEMA;
+                _log('Tracking schema set: ' + schema);
+            }
+            /** Set the unique browser and session IDs */
+            function _setIds () {
+                browserId = localStorage.getItem(BROWSER_KEY);
+                sessionId = sessionStorage.getItem(SESSION_KEY);
+                savedSessionId = localStorage.getItem(SESSION_KEY);
+                idString = window.navigator.userAgent + Date.now().toString();
+                hashedId = md5(idString);
+                /**
+                 * If a `session-id` has been saved in localStorage, then we
+                 * want make use of this to continue the session, and then clear
+                 * localStorage
+                 */
+                if (savedSessionId) {
+                    sessionId = savedSessionId;
+                    sessionStorage.setItem(SESSION_KEY, savedSessionId);
+                    if (!preserveSavedSession) {
+                        localStorage.removeItem(SESSION_KEY);
+                    }
+                    previousSession = true;
+                } else if (!sessionId) {
+                    sessionId = hashedId;
+                    sessionStorage.setItem(SESSION_KEY, hashedId);
+                }
+                if (!browserId) {
+                    browserId = hashedId;
+                    localStorage.setItem(BROWSER_KEY, hashedId);
+                }
+                _log('Tracking sessionId set: ' + sessionId);
+                _log('Tracking browserId set: ' + browserId);
+            }
+            /**
+             * Save a session so that this can be maintained across apps
+             */
+            function _saveSession () {
+                localStorage.setItem(SESSION_KEY, sessionId);
+            }
+            /**
+             * Save a schema so that this can be transferred between sessions
+             * or apps
+             */
+            function _saveSchema () {
+                localStorage.setItem(SCHEMA_KEY, schema);
+            }
+            /**
+             * Check whether a session has expired
+             * @returns {Boolean}
+             */
+            function _sessionExpired () {
+                if (!lastUpdate) {
+                    return false;
+                }
+                let now = Date.now();
+                return now - lastUpdate > sessionLength;
+            }
+            /** Set the user's OS details */
+            function _setOs () {
+                os = {
+                    name: platform.os.family,
+                    version: platform.os.version
+                }
+                _log('Tracking OS set: ' + JSON.stringify(os));
+            }
+            /** Set the user's timezoneOffset */
+            function _setTimezoneOffset () {
+                let now = new Date();
+                timezoneOffset = now.getTimezoneOffset();
+                _log('Tracking timezoneOffset set: ' + timezoneOffset);
+            }
+            /**
+             * Queue a `started_session` event, as well as the event that
+             * restarted it (if provided) and schedule the queue processing
+             * @param {Object} startEvent
+             */
+            function _startSession (startEvent) {
+                if (!previousSession) {
+                    _queueEvent({
+                        name: 'started_session',
+                        data: {
+                            user_location: location
+                        }
+                    });
+                    if (startEvent) {
+                        _queueEvent(startEvent);
+                    }
+                }
+                sessionStarted = true;
+                _scheduleQueueDispatch();
+            }
+            /**
+             * Update the token and restart the session if it has been unset
+             * @param {Event} e
+             */
+            function _tokenChanged (e) {
+                let previous = token,
+                    current = e.detail.token;
+                token = current;
+                /**
+                 * If there was a previous session, but not a new one – ie. the
+                 * user has logged out – we want to trigger a new session
+                 */
+                if (previous && !current) {
+                    _restartSession();
+                }
+            }
+            /**
+             * Track an event fired by the app
+             * @param {Event} e
+             */
+            function _trackBasicEvent (e) {
+                let name = e.detail.name,
+                    payload = {
+                        name
+                    };
+                if (e.detail.data) {
+                    payload.data = e.detail.data;
+                }
+                if (e.detail.token) {
+                    payload.token = e.detail.token;
+                }
+                _queueEvent(payload);
+            }
+            /**
+             * Track a page view logged by the app
+             * @param {Event} e
+             */
+            function _trackPageView (e) {
+                let previous = path,
+                    payload = {
+                        name: 'viewed_page'
+                    };
+                path = e.detail.path;
+                if (previous) {
+                    payload.data = {
+                        previous_page_path: previous
+                    }
+                }
+                _queueEvent(payload);
+            }
+            /**
+             * Track an error event
+             * @param {Object} payload
+             */
+            function _trackError (payload) {
+                if (sessionStarted) {
+                    payload.os = os.name;
+                    payload.os_version = os.version;
+                    _queueEvent(payload);
+                } else {
+                    queue.push(payload);
+                }
+            }
+            /**
+             * Respond to a user-initiated error
+             * @param {Event} e The error event
+             */
+            function _trackUserError (e) {
+                _trackError({
+                    name: 'user_error',
+                    data: {
+                        error_message: e.detail.message
+                    }
+                });
+            }
+            /**
+             * TODO: Check how this is being used
+             * Respond to a system error
+             * @param {String} msg
+             * @param {String} url
+             * @param {String} lineNo
+             * @param {String} columnNo
+             * @param {String} error
+             */
+            function _trackSystemError (msg, url, lineNo, columnNo, error) {
+                let message = [
+                        'Message: ' + msg,
+                        'Path: ' + url,
+                        'Line: ' + lineNo,
+                        'Column: ' + columnNo
+                    ].join(' - ');
+                    _trackError({
+                        name: 'system_error',
+                        data: {
+                            error_message: message
+                        }
+                    });
+                return false;
+            };
+            /** The Polymer 1 behavior */
+            Behavior = {
+                listeners: {
+                    'error-event': '_trackUserError',
+                    'initialize-tracking': '_initializeTracking',
+                    'page-view': '_trackPageView',
+                    'token-changed': '_tokenChanged',
+                    'tracking-event': '_trackBasicEvent'
+                },
+                detached () {
+                    _clearQueueDispatch();
+                }
+            };
+            /** The Polymer 2 mixin */
+            Mixin = (parent) => {
+                return class TrackingComponent extends parent {
+                    connectedCallback () {
+                        super.connectedCallback();
+                        window.addEventListener('tracking-event', _trackBasicEvent);
+                        window.addEventListener('page-view', _trackPageView);
+                        window.addEventListener('token-changed', _tokenChanged);
+                        window.addEventListener('error-event', _trackUserError);
+                        window.addEventListener('initialize-tracking', _initializeTracking);
+                    }
+                    disconnectedCallback() {
+                        window.removeEventListener('tracking-event', _trackBasicEvent);
+                        window.removeEventListener('page-view', _trackPageView);
+                        window.removeEventListener('token-changed', _tokenChanged);
+                        window.removeEventListener('error-event', _trackUserError);
+                        window.removeEventListener('initialize-tracking', _initializeTracking);
+                        _clearQueueDispatch();
+                    }
+                }
+            };
+            if (config.DEBUG) {
+                return {
+                    queue,
+                    _clearQueueDispatch,
+                    _dispatchQueue,
+                    _getLocation,
+                    _initializeTracking,
+                    _queueEvent,
+                    _restartSession,
+                    _scheduleQueueDispatch,
+                    _setIds,
+                    _setSchema,
+                    _sessionExpired,
+                    _setOs,
+                    _setTimezoneOffset,
+                    _startSession,
+                    _tokenChanged,
+                    _trackBasicEvent,
+                    _trackPageView,
+                    _trackError,
+                    _trackUserError,
+                    _trackSystemError,
+                    Behavior,
+                    Mixin
+                }
+            } else {
+                return {
+                    Behavior,
+                    Mixin
+                }
+            }
+        }
+    })(window.Kano = window.Kano || {});
+</script>
