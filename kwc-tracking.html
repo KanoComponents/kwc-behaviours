@@ -119,6 +119,9 @@
                         'Content-Type': 'application/json'
                     }),
                     cache = queue;
+                if (token) {
+                    headers.append('Authorization', token);
+                }
                 queue = [];
                 fetch(`${config.API_URL}/track/${schema}`, {
                     method: 'POST',
@@ -201,16 +204,6 @@
                     time: parseInt(Date.now() / 1000),
                     timezone_offset: timezoneOffset
                 };
-                if (token) {
-                    headers.append('Authorization', token);
-                } else if (payload.token) {
-                    /**
-                     * If a token has been passed through with the event
-                     * details, use this as a backup token to identify events
-                     * with a user
-                     */
-                    headers.append('Authorization', payload.token);
-                }
                 if (kitId) {
                     body.kitId = kitId;
                 }
