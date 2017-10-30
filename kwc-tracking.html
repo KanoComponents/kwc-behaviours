@@ -7,7 +7,7 @@
         Kano.Behaviors.Tracking = (config) => {
             /** Expire the session after 30 minutes of inactivity */
             const DEFAULT_SESSION_LENGTH = 30 * 60 * 1000,
-            /** Process the queue every 5 seconds */
+                  /** Process the queue every 5 seconds */
                   DEFAULT_QUEUE_LENGTH = 5 * 1000,
                   BROWSER_KEY = 'KANO-TRACKING-BROWSER-ID',
                   SESSION_KEY = 'KANO-TRACKING-SESSION-ID',
@@ -172,6 +172,12 @@
                 _setIds();
                 _setOs();
                 _setTimezoneOffset();
+                if (e.detail.token) {
+                    _tokenChanged(e);
+                }
+                if (e.detail.path) {
+                    _trackPageView(e);  
+                }
                 let storedLocation = localStorage.getItem(LOCATION_KEY);
                 if (!storedLocation || storedLocation === 'Unkown') {
                     _getLocation().then(response => {
