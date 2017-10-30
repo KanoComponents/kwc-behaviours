@@ -1,0 +1,37 @@
+{
+  "name": "kwc-behaviours",
+  "homepage": "https://github.com/KanoComponents/kwc-behaviours",
+  "authors": [
+    "Kano Computing"
+  ],
+  "description": "Provides a collection of behaviors used by the Kano apps",
+  "main": [
+    "kano-validation.html",
+    "kwc-tracking.html"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/KanoComponents/kwc-behaviours.git"
+  },
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "js-md5": "md5#^0.7.1",
+    "platform.js": "platform#^1.3.4"
+  },
+  "devDependencies": {
+    "web-components": "git@github.com:KanoComputing/web-components.git#master",
+    "web-component-tester": "Polymer/web-component-tester#^6.0.0"
+  },
+  "resolutions": {
+    "js-md5": "^0.7.1",
+    "polymer": "^1.9.0",
+    "webcomponentsjs": "^0.7.24"
+  }
+}
