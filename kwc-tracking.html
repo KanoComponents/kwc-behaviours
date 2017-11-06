@@ -459,6 +459,7 @@
                         window.addEventListener('initialize-tracking', _initializeTracking);
                     }
                     disconnectedCallback() {
+                        super.disconnectedCallback();
                         window.removeEventListener('tracking-event', _trackBasicEvent);
                         window.removeEventListener('page-view', _trackPageView);
                         window.removeEventListener('token-changed', _tokenChanged);
