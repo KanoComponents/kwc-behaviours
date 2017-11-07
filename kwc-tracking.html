@@ -172,7 +172,7 @@
                     _trackPageView(e);
                 }
                 let storedLocation = localStorage.getItem(LOCATION_KEY);
-                if (!storedLocation || storedLocation === 'Unkown') {
+                if (!storedLocation || storedLocation === 'Unknown') {
                     _getLocation().then(response => {
                         location = response;
                         localStorage.setItem(LOCATION_KEY, response);
