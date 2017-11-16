@@ -118,7 +118,9 @@
                 let headers = new Headers({
                         'Content-Type': 'application/json'
                     }),
-                    cache = queue;
+                    req = {
+                        events: queue
+                    };
                 if (token) {
                     headers.append('Authorization', token);
                 }
@@ -126,11 +128,11 @@
                 fetch(`${config.API_URL}/track/${schema}`, {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify(cache)
+                    body: JSON.stringify(req)
                 }).catch(err => {
                     _log(err);
                     /** If the request has failed, reinsert the failed queue */
-                    queue.splice(0, 0, cache);
+                    queue.splice(0, 0, req.events);
                 });
             }
             /**
