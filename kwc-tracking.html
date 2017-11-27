@@ -462,18 +462,23 @@
             /** The Polymer 1 behavior */
             Behavior = {
                 attached () {
-                    window.addEventListener('tracking-event', _trackBasicEvent.bind(this));
-                    window.addEventListener('page-view', _trackPageView.bind(this));
-                    window.addEventListener('token-changed', _tokenChanged.bind(this));
-                    window.addEventListener('error-event', _trackUserError.bind(this));
-                    window.addEventListener('initialize-tracking', _initializeTracking.bind(this));
+                    this._trackBasicEvent = _trackBasicEvent.bind(this);
+                    this._trackPageView = _trackPageView.bind(this);
+                    this._tokenChanged = _tokenChanged.bind(this);
+                    this._trackUserError = _trackUserError.bind(this);
+                    this._initializeTracking = _initializeTracking.bind(this);
+                    window.addEventListener('tracking-event', this._trackBasicEvent);
+                    window.addEventListener('page-view', this._trackPageView);
+                    window.addEventListener('token-changed', this._tokenChanged);
+                    window.addEventListener('error-event', this._trackUserError);
+                    window.addEventListener('initialize-tracking', this._initializeTracking);
                 },
                 detached () {
-                    window.removeEventListener('tracking-event', _trackBasicEvent);
-                    window.removeEventListener('page-view', _trackPageView);
-                    window.removeEventListener('token-changed', _tokenChanged);
-                    window.removeEventListener('error-event', _trackUserError);
-                    window.removeEventListener('initialize-tracking', _initializeTracking);
+                    window.removeEventListener('tracking-event', this._trackBasicEvent);
+                    window.removeEventListener('page-view', this._trackPageView);
+                    window.removeEventListener('token-changed', this._tokenChanged);
+                    window.removeEventListener('error-event', this._trackUserError);
+                    window.removeEventListener('initialize-tracking', this._initializeTracking);
                     _clearQueueDispatch();
                 }
             };
