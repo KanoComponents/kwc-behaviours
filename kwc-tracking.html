@@ -13,7 +13,6 @@
                   SESSION_KEY = 'KANO-TRACKING-SESSION-ID',
                   SCHEMA_KEY = 'KANO-TRACKING-SCHEMA',
                   LOCATION_KEY = 'KANO-TRACKING-LOCATION';
-
             /**
              * The (hopefully) unique ID for the user's browser
              * @type {String}
@@ -43,7 +42,7 @@
                  * The user's OS details
                  * @type {Object}
                  */
-                os,
+                os = {},
                 /**
                  * The current URL path
                  * @type {String}
@@ -110,6 +109,26 @@
                 window.clearInterval(queueInterval);
                 _dispatchQueue();
             }
+            function _decodeQueryParams (paramString) {
+                let params = {};
+                if (paramString[0] === '?') {
+                    paramString = paramString.slice(1);
+                }
+                /**
+                 * Work around a bug in decodeURIComponent where + is not
+                 * converted to spaces:
+                 */
+                paramString = (paramString || '').replace(/\+/g, '%20');
+                let paramList = paramString.split('&');
+                paramList.forEach(param => {
+                    let keyValue = param.split('=');
+                    if (keyValue[0]) {
+                        params[decodeURIComponent(keyValue[0])] =
+                        decodeURIComponent(keyValue[1] || '');
+                    }
+                });
+                return params;
+            }
             /** Dispatch the event queue to the API */
             function _dispatchQueue () {
                 if (!queue.length) {
@@ -126,7 +145,7 @@
                 fetch(`${config.API_URL}/track/${schema}`, {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify(cache)
+                    body: JSON.stringify({events: cache})
                 }).catch(err => {
                     _log(err);
                     /** If the request has failed, reinsert the failed queue */
@@ -237,14 +256,20 @@
             function _scheduleQueueDispatch () {
                 queueInterval = window.setInterval(_dispatchQueue, queueLength);
             }
-            /** Set the schema - either from the localStorage or the config */
+            /**
+             * Set the schema - from the queryParams, localStorage
+             * or the config
+             */
             function _setSchema () {
                 /**
                  * When using Kano Code within the Electron app, we want to be
                  * able to provide the app's schema in place of the default
                  * schema
                  */
-                schema = localStorage.getItem(SCHEMA_KEY) || config.TRACKING.SCHEMA;
+                let params = _decodeQueryParams(window.location.search);
+                schema = params[SCHEMA_KEY] ||
+                         localStorage.getItem(SCHEMA_KEY) ||
+                         config.TRACKING.SCHEMA;
                 _log('Tracking schema set: ' + schema);
             }
             /** Set the unique browser and session IDs */
@@ -436,14 +461,19 @@
             };
             /** The Polymer 1 behavior */
             Behavior = {
-                listeners: {
-                    'error-event': '_trackUserError',
-                    'initialize-tracking': '_initializeTracking',
-                    'page-view': '_trackPageView',
-                    'token-changed': '_tokenChanged',
-                    'tracking-event': '_trackBasicEvent'
+                attached () {
+                    window.addEventListener('tracking-event', _trackBasicEvent.bind(this));
+                    window.addEventListener('page-view', _trackPageView.bind(this));
+                    window.addEventListener('token-changed', _tokenChanged.bind(this));
+                    window.addEventListener('error-event', _trackUserError.bind(this));
+                    window.addEventListener('initialize-tracking', _initializeTracking.bind(this));
                 },
                 detached () {
+                    window.removeEventListener('tracking-event', _trackBasicEvent);
+                    window.removeEventListener('page-view', _trackPageView);
+                    window.removeEventListener('token-changed', _tokenChanged);
+                    window.removeEventListener('error-event', _trackUserError);
+                    window.removeEventListener('initialize-tracking', _initializeTracking);
                     _clearQueueDispatch();
                 }
             };
