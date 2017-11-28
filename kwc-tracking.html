@@ -175,6 +175,14 @@
                     });
             }
             /**
+             * Trigger the `_clearQueueDispatch` and remove the listener
+             * properly when unloading the page.
+             */
+            function _handleUnload () {
+                _clearQueueDispatch();
+                window.removeEventListener('unload', _handleUnload);
+            }
+            /**
              * Ensure that all the relevent information is set (including the
              * token if supplied) and start the session
              * @param {Event} e
@@ -475,14 +483,13 @@
                     this._trackUserError = _trackUserError.bind(this);
                     this._initializeTracking = _initializeTracking.bind(this);
                     this._trackSystemError = _trackSystemError.bind(this);
-                    this._clearQueueDispatch = _clearQueueDispatch.bind(this);
                     window.addEventListener('tracking-event', this._trackBasicEvent);
                     window.addEventListener('page-view', this._trackPageView);
                     window.addEventListener('token-changed', this._tokenChanged);
                     window.addEventListener('error-event', this._trackUserError);
                     window.addEventListener('initialize-tracking', this._initializeTracking);
                     window.addEventListener('error', this._trackSystemError);
-                    window.addEventListener('beforeunload', this._clearQueueDispatch);
+                    window.addEventListener('beforeunload', this._handleUnload);
                 },
                 detached () {
                     window.removeEventListener('tracking-event', this._trackBasicEvent);
@@ -491,7 +498,12 @@
                     window.removeEventListener('error-event', this._trackUserError);
                     window.removeEventListener('initialize-tracking', this._initializeTracking);
                     window.removeEventListener('error', this._trackSystemError);
+                    window.removeEventListener('beforeunload', this._handleUnload);
                     _clearQueueDispatch();
+                },
+                _handleUnload () {
+                    _clearQueueDispatch();
+                    window.removeEventListener('beforeunload', this._handleUnload);
                 }
             };
             /** The Polymer 2 mixin */
@@ -505,7 +517,7 @@
                         window.addEventListener('error-event', _trackUserError);
                         window.addEventListener('initialize-tracking', _initializeTracking);
                         window.addEventListener('error', _trackSystemError);
-                        window.addEventListener('beforeunload', _clearQueueDispatch);
+                        window.addEventListener('beforeunload', _handleUnload);
                     }
                     disconnectedCallback() {
                         super.disconnectedCallback();
@@ -515,6 +527,7 @@
                         window.removeEventListener('error-event', _trackUserError);
                         window.removeEventListener('initialize-tracking', _initializeTracking);
                         window.removeEventListener('error', _trackSystemError);
+                        window.removeEventListener('beforeunload', _handleUnload);
                         _clearQueueDispatch();
                     }
                 }
