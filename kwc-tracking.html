@@ -180,6 +180,10 @@
              * @param {Event} e
              */
             function _initializeTracking (e) {
+                /** If we've already started the session, then do nothing */
+                if (sessionStarted) {
+                    return;
+                }
                 _setSchema();
                 _setIds();
                 _setOs();
@@ -398,6 +402,13 @@
              * @param {Event} e
              */
             function _trackPageView (e) {
+                /**
+                 * If the new page is the same as the current, then this is a
+                 * duplicate event and should be rejected.
+                 */
+                if (path === e.detail.path) {
+                    return;
+                }
                 let previous = path,
                     payload = {
                         name: 'viewed_page'
@@ -415,13 +426,9 @@
              * @param {Object} payload
              */
             function _trackError (payload) {
-                if (sessionStarted) {
-                    payload.os = os.name;
-                    payload.os_version = os.version;
-                    _queueEvent(payload);
-                } else {
-                    queue.push(payload);
-                }
+                payload.os = os.name;
+                payload.os_version = os.version;
+                _queueEvent(payload);
             }
             /**
              * Respond to a user-initiated error
@@ -467,11 +474,15 @@
                     this._tokenChanged = _tokenChanged.bind(this);
                     this._trackUserError = _trackUserError.bind(this);
                     this._initializeTracking = _initializeTracking.bind(this);
+                    this._trackSystemError = _trackSystemError.bind(this);
+                    this._clearQueueDispatch = _clearQueueDispatch.bind(this);
                     window.addEventListener('tracking-event', this._trackBasicEvent);
                     window.addEventListener('page-view', this._trackPageView);
                     window.addEventListener('token-changed', this._tokenChanged);
                     window.addEventListener('error-event', this._trackUserError);
                     window.addEventListener('initialize-tracking', this._initializeTracking);
+                    window.addEventListener('error', this._trackSystemError);
+                    window.addEventListener('beforeunload', this._clearQueueDispatch);
                 },
                 detached () {
                     window.removeEventListener('tracking-event', this._trackBasicEvent);
@@ -479,6 +490,7 @@
                     window.removeEventListener('token-changed', this._tokenChanged);
                     window.removeEventListener('error-event', this._trackUserError);
                     window.removeEventListener('initialize-tracking', this._initializeTracking);
+                    window.removeEventListener('error', this._trackSystemError);
                     _clearQueueDispatch();
                 }
             };
@@ -492,6 +504,8 @@
                         window.addEventListener('token-changed', _tokenChanged);
                         window.addEventListener('error-event', _trackUserError);
                         window.addEventListener('initialize-tracking', _initializeTracking);
+                        window.addEventListener('error', _trackSystemError);
+                        window.addEventListener('beforeunload', _clearQueueDispatch);
                     }
                     disconnectedCallback() {
                         super.disconnectedCallback();
@@ -500,6 +514,7 @@
                         window.removeEventListener('token-changed', _tokenChanged);
                         window.removeEventListener('error-event', _trackUserError);
                         window.removeEventListener('initialize-tracking', _initializeTracking);
+                        window.removeEventListener('error', _trackSystemError);
                         _clearQueueDispatch();
                     }
                 }
