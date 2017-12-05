@@ -196,15 +196,19 @@
              */
             function _handleUnload () {
                 window.removeEventListener('unload', _handleUnload);
-                let client = new XMLHttpRequest(),
-                    url = `${config.API_URL}/track/${schema}`,
-                    body = JSON.stringify({events: queue});
-                client.open('POST', url, false);
-                client.setRequestHeader('Content-type', 'application/json');
-                if (token) {
-                    client.setRequestHeader('Authorization', token);
+                try {
+                    let client = new XMLHttpRequest(),
+                        url = `${config.API_URL}/track/${schema}`,
+                        body = JSON.stringify({events: queue});
+                    client.open('POST', url, false);
+                    client.setRequestHeader('Content-type', 'application/json');
+                    if (token) {
+                        client.setRequestHeader('Authorization', token);
+                    }
+                    client.send(body);
+                } catch (e) {
+                    _log(e);
                 }
-                client.send(body);
                 queue = [];
             }
             /**
