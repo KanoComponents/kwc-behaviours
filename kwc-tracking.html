@@ -196,6 +196,9 @@
              */
             function _handleUnload () {
                 window.removeEventListener('unload', _handleUnload);
+                if (!queue.length) {
+                    return;
+                }
                 try {
                     let client = new XMLHttpRequest(),
                         url = `${config.API_URL}/track/${schema}`,
