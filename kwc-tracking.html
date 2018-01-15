@@ -486,8 +486,9 @@
              * @param {Object} payload
              */
             function _trackError (payload) {
-                payload.os = os.name;
-                payload.os_version = os.version;
+                if (!sessionStarted) {
+                    return preInitEvents.push(payload);
+                }
                 _queueEvent(payload);
             }
             /**
