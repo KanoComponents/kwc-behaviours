@@ -57,6 +57,14 @@
                  */
                 preInitEvents = [],
                 /**
+                 * Boolean flag to prevent the previous session data being
+                 * erased from `localStorage` – eg. on the Kano 2 App where we
+                 * want to preserve this when switching between the main app
+                 * and Kano Code.
+                 * @type {Boolean}
+                 */
+                preserveSavedSession = config.PRESERVE_PREVIOUS_SESSION,
+                /**
                  * The user's device mode (Kano 2 app only)
                  * @type {Boolean}
                  */
@@ -170,6 +178,14 @@
                 }
             }
             /**
+             * Allow the `browserId` to be accessed to allow the component using
+             * the behavior or mixin to use this if required
+             * @returns {String}
+             */
+            function _getBrowserId () {
+                return browserId;
+            }
+            /**
              * Retrieve the user's current location from the Geo API
              * @returns {Promise}
              */
@@ -181,6 +197,14 @@
                     }).catch((error) => {
                         return 'Unknown';
                     });
+            }
+            /**
+             * Allow the `sessionId` to be accessed to allow the component using
+             * the behavior or mixin to use this if required
+             * @returns {String}
+             */
+            function _getSessionId () {
+                return sessionId;
             }
             /**
              * Send what's left of the queue using a synchronous XMLHttpRequest
@@ -238,12 +262,16 @@
                 if (!storedLocation || storedLocation === 'Unknown') {
                     _getLocation().then(response => {
                         location = response;
-                        localStorage.setItem(LOCATION_KEY, response);
+                        localStorage.setItem(LOCATION_KEY, location);
+                        _log('Tracking location set: ' + location);
                         _startSession(preInitEvents);
+                        preInitEvents = [];
                     });
                 } else {
                     location = storedLocation;
+                    _log('Tracking location set: ' + location);
                     _startSession(preInitEvents);
+                    preInitEvents = [];
                 }
             }
             /**
@@ -318,31 +346,41 @@
             }
             /** Set the unique browser and session IDs */
             function _setIds () {
-                browserId = localStorage.getItem(BROWSER_KEY);
+                let params = _decodeQueryParams(window.location.search),
+                    previousSessionId = params[SESSION_KEY] ||
+                                        localStorage.getItem(SESSION_KEY),
+                    idString = window.navigator.userAgent +
+                               Date.now().toString(),
+                    hashedId = md5(idString);
+
+                browserId = params[BROWSER_KEY] ||
+                            localStorage.getItem(BROWSER_KEY);
                 sessionId = sessionStorage.getItem(SESSION_KEY);
-                savedSessionId = localStorage.getItem(SESSION_KEY);
-                idString = window.navigator.userAgent + Date.now().toString();
-                hashedId = md5(idString);
+
                 /**
-                 * If a `session-id` has been saved in localStorage, then we
-                 * want make use of this to continue the session, and then clear
-                 * localStorage
+                 * If a `session-id` has been saved in localStorage or provided
+                 * in the params, then we want make use of this to continue the
+                 * session, and then clear `localStorage`
                  */
-                if (savedSessionId) {
-                    sessionId = savedSessionId;
-                    sessionStorage.setItem(SESSION_KEY, savedSessionId);
+                if (previousSessionId) {
+                    sessionId = previousSessionId;
+                    sessionStorage.setItem(SESSION_KEY, previousSessionId);
                     if (!preserveSavedSession) {
                         localStorage.removeItem(SESSION_KEY);
                     }
                     previousSession = true;
                 } else if (!sessionId) {
                     sessionId = hashedId;
-                    sessionStorage.setItem(SESSION_KEY, hashedId);
+                    sessionStorage.setItem(SESSION_KEY, sessionId);
                 }
                 if (!browserId) {
                     browserId = hashedId;
-                    localStorage.setItem(BROWSER_KEY, hashedId);
                 }
+                /**
+                 * Save the browser key to allow the ID supplied in the params
+                 * to override any existing ID
+                 */
+                localStorage.setItem(BROWSER_KEY, browserId);
                 _log('Tracking sessionId set: ' + sessionId);
                 _log('Tracking browserId set: ' + browserId);
             }
@@ -397,11 +435,15 @@
                             user_location: location
                         }
                     });
-                    if (startEvents && startEvents.length) {
-                        startEvents.forEach(startEvent => {
-                            _queueEvent(startEvent);
-                        });
-                    }
+                }
+                /**
+                 * If the session is being started with previous events, then
+                 * we need to put these into the main queue
+                 */
+                if (startEvents && startEvents.length) {
+                    startEvents.forEach(startEvent => {
+                        _queueEvent(startEvent);
+                    });
                 }
                 sessionStarted = true;
                 _scheduleQueueDispatch();
@@ -536,6 +578,8 @@
                     this._trackUserError = _trackUserError.bind(this);
                     this._initializeTracking = _initializeTracking.bind(this);
                     this._trackSystemError = _trackSystemError.bind(this);
+                    this._getBrowserId = _getBrowserId.bind(this);
+                    this._getSessionId = _getSessionId.bind(this);
                     window.addEventListener('tracking-event', this._trackBasicEvent);
                     window.addEventListener('page-view', this._trackPageView);
                     window.addEventListener('token-changed', this._tokenChanged);
@@ -571,6 +615,8 @@
                         window.addEventListener('initialize-tracking', _initializeTracking);
                         window.addEventListener('error', _trackSystemError);
                         window.addEventListener('beforeunload', _handleUnload);
+                        this._getBrowserId = _getBrowserId.bind(this);
+                        this._getSessionId = _getSessionId.bind(this);
                     }
                     disconnectedCallback() {
                         super.disconnectedCallback();
@@ -590,7 +636,9 @@
                     queue,
                     _clearQueueDispatch,
                     _dispatchQueue,
+                    _getBrowserId,
                     _getLocation,
+                    _getSessionId,
                     _initializeTracking,
                     _queueEvent,
                     _restartSession,
