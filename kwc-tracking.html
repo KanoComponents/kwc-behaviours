@@ -2,7 +2,11 @@
 <script src="../platform.js/platform.js"></script>
 
 <script>
-    (Kano => {
+    (() => {
+        window.Kano = window.Kano || {}
+        /**
+         * @namespace Kano.Behaviors
+         */
         Kano.Behaviors = Kano.Behaviors || {};
         Kano.Behaviors.Tracking = (config) => {
             /** Expire the session after 30 minutes of inactivity */
@@ -665,5 +669,5 @@
                 }
             }
         }
-    })(window.Kano = window.Kano || {});
+    })();
 </script>

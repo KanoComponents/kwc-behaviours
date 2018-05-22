@@ -1,0 +1,17 @@
+{
+    "files": {
+        "kwc-tracking.html": {
+            "convertedUrl": "kwc-tracking.js",
+            "exports": {
+                "Kano.Behaviors.Tracking": "Tracking"
+            }
+        },
+        "kano-validation.html": {
+            "convertedUrl": "kano-validation.js",
+            "exports": {
+                "Kano.Behaviors.Mixin": "Mixin",
+                "Kano.Behaviors.Behavior": "Behaviour"
+            }
+        }
+    }
+}
