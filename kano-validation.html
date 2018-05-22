@@ -1,6 +1,13 @@
 <script>
-    ((Kano) => {
+    (() => {
+        window.Kano = window.Kano || {};
+        /**
+         * @namespace Kano.Validation
+         */
         Kano.Validation = Kano.Validation || {};
+        /**
+         * @polymerBehavior
+         */
         Kano.Validation.Mixin = (superClass) => class extends superClass {
             constructor() {
                 super();
@@ -78,7 +85,9 @@
                 return terms;
             }
         }
-        /** @polymerBehavior Kano.Validation.Behaviour */
+        /**
+         * @polymerBehavior Kano.Validation.Behaviour
+         */
         Kano.Validation.Behaviour = {
             properties: {
                 /**
@@ -148,5 +157,5 @@
                 return terms;
             }
         }
-    })(window.Kano = window.Kano || {});
+    })();
 </script>

@@ -26,12 +26,6 @@
     "js-md5": "md5#^0.7.2"
   },
   "devDependencies": {
-    "web-components": "git@github.com:KanoComputing/web-components.git#master",
     "web-component-tester": "Polymer/web-component-tester#^6.0.0"
-  },
-  "resolutions": {
-    "polymer": "^1.9.0",
-    "webcomponentsjs": "^0.7.24",
-    "js-md5": "^0.7.2"
   }
 }
