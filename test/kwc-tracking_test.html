@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
 
     <title>kwc-tracking test</title>
-    <script src="../../web-component-tester/browser.js"></script>
+    <script src="../../../wct-browser-legacy/browser.js"></script>
 
-    <link rel="import" href="../kwc-tracking.html">
+    <script type="module" src="../kwc-tracking.js"></script>
   </head>
   <body>
     <test-fixture id="basic">
@@ -16,71 +16,72 @@
       </template>
     </test-fixture>
 
-    <script>
-        var testBehavior = Kano.Behaviors.Tracking({
-            API_URL: 'http://localhost:1234',
-            DEBUG: true,
-            TRACKING: {
-                SCHEMA: 'test'
+    <script type="module">
+import { Tracking } from '../kwc-tracking.js';
+var testBehavior = Tracking({
+    API_URL: 'http://localhost:1234',
+    DEBUG: true,
+    TRACKING: {
+        SCHEMA: 'test'
+    }
+});
+
+setup(function () {
+    testBehavior._setOs();
+    testBehavior._setSchema();
+});
+
+suite('kwc-tracking', function () {
+    test('Tracking a generic event should queue the event', function () {
+        testBehavior._trackBasicEvent({
+            detail: {
+                name: 'test-event',
+                data: {
+                    attr1: 'foo',
+                    attr2: 'bar'
+                }
             }
         });
+        let queuedEvent = testBehavior.queue[0];
+        assert.equal(queuedEvent.name, 'test-event');
+        assert.equal(queuedEvent.data.attr1, 'foo');
+        assert.equal(queuedEvent.data.attr2, 'bar');
+    });
 
-        setup(function () {
-            testBehavior._setOs();
-            testBehavior._setSchema();
+    test('Tracking a page view should queue the correct event', function () {
+        testBehavior._trackPageView({
+            detail: {
+                path: '/test-page'
+            }
         });
+        let queuedEvent = testBehavior.queue[1];
+        assert.equal(queuedEvent.name, 'viewed_page');
+        assert.equal(queuedEvent.page_path, '/test-page');
+    });
 
-        suite('kwc-tracking', function () {
-            test('Tracking a generic event should queue the event', function () {
-                testBehavior._trackBasicEvent({
-                    detail: {
-                        name: 'test-event',
-                        data: {
-                            attr1: 'foo',
-                            attr2: 'bar'
-                        }
-                    }
-                });
-                let queuedEvent = testBehavior.queue[0];
-                assert.equal(queuedEvent.name, 'test-event');
-                assert.equal(queuedEvent.data.attr1, 'foo');
-                assert.equal(queuedEvent.data.attr2, 'bar');
-            });
-
-            test('Tracking a page view should queue the correct event', function () {
-                testBehavior._trackPageView({
-                    detail: {
-                        path: '/test-page'
-                    }
-                });
-                let queuedEvent = testBehavior.queue[1];
-                assert.equal(queuedEvent.name, 'viewed_page');
-                assert.equal(queuedEvent.page_path, '/test-page');
-            });
-
-            test('Tracking a user error should queue the correct event', function () {
-                testBehavior._trackUserError({
-                    detail: {
-                        message: 'Test Error!'
-                    }
-                });
-                let queuedEvent = testBehavior.queue[2];
-                assert.equal(queuedEvent.name, 'user_error');
-                assert.equal(queuedEvent.data.error_message, 'Test Error!');
-            });
-
-            test('Setting the browser ID should save it in localStorage', function () {
-                testBehavior._setIds();
-                let savedBrowserId = localStorage.getItem('KANO-TRACKING-BROWSER-ID');
-                assert.notEqual(savedBrowserId, null);
-            });
-
-            test('Setting the session ID should save it in sessionStorage', function () {
-                testBehavior._setIds();
-                let savedSessionId = sessionStorage.getItem('KANO-TRACKING-SESSION-ID');
-                assert.notEqual(savedSessionId, null);
-            });
+    test('Tracking a user error should queue the correct event', function () {
+        testBehavior._trackUserError({
+            detail: {
+                message: 'Test Error!'
+            }
         });
-    </script>
+        let queuedEvent = testBehavior.queue[2];
+        assert.equal(queuedEvent.name, 'user_error');
+        assert.equal(queuedEvent.data.error_message, 'Test Error!');
+    });
+
+    test('Setting the browser ID should save it in localStorage', function () {
+        testBehavior._setIds();
+        let savedBrowserId = localStorage.getItem('KANO-TRACKING-BROWSER-ID');
+        assert.notEqual(savedBrowserId, null);
+    });
+
+    test('Setting the session ID should save it in sessionStorage', function () {
+        testBehavior._setIds();
+        let savedSessionId = sessionStorage.getItem('KANO-TRACKING-SESSION-ID');
+        assert.notEqual(savedSessionId, null);
+    });
+});
+</script>
   </body>
 </html>
