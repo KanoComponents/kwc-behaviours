@@ -574,7 +574,7 @@
                 return false;
             };
             /** The Polymer 1 behavior */
-            Behavior = {
+            const Behavior = {
                 attached () {
                     this._trackBasicEvent = _trackBasicEvent.bind(this);
                     this._trackPageView = _trackPageView.bind(this);
@@ -608,7 +608,7 @@
                 }
             };
             /** The Polymer 2 mixin */
-            Mixin = (parent) => {
+            const Mixin = (parent) => {
                 return class TrackingComponent extends parent {
                     connectedCallback () {
                         super.connectedCallback();
