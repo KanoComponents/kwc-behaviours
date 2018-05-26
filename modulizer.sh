@@ -1,6 +1,7 @@
 modulizer --out . \
 --npm-name @kano/kwc-behaviors \
---npm-version 3.0.0-beta.3 \
+--npm-version 3.0.0-beta.4 \
+--import-style name \
 --dependency-mapping platform.js,platform,^1.3.5 \
 --dependency-mapping js-md5,blueimp-md5,^2.10
 
