@@ -60,7 +60,7 @@ export const Mixin = (superClass) => class extends superClass {
 
         this.set('errors.password', undefined);
         return true;
-    },
+    }
     validateEmail(email) {
         let emailRegex = /^[_a-z0-9-\+]+(\.[_a-z0-9-\+]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]+)$/i;
 
