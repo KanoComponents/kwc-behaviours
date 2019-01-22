@@ -22,7 +22,7 @@ export const Mixin = (superClass) => class extends superClass {
             }
         };
     }
-    validateUsername (username) {
+    validateUsername(username) {
         if (!username) {
             this.set('errors.username', "Username is required.");
             return false;
@@ -41,13 +41,19 @@ export const Mixin = (superClass) => class extends superClass {
         this.set('errors.username', undefined);
         return true;
     }
-    validatePassword (password) {
+    validatePassword(password) {
         if (!password) {
             this.set('errors.password', "Password cannot be empty.");
             return false;
         }
+        const trimmedPassword = password.trim();
 
-        if (password.length < 6) {
+        if (trimmedPassword.includes(' ')) {
+            this.set('errors.password', "Password cannot contain spaces.");
+            return false;
+        }
+
+        if (trimmedPassword.length < 6) {
             this.set('errors.password', "Password must be at least 6 characters long.");
             return false;
         }
@@ -55,7 +61,7 @@ export const Mixin = (superClass) => class extends superClass {
         this.set('errors.password', undefined);
         return true;
     }
-    validateEmail (email) {
+    validateEmail(email) {
         let emailRegex = /^[_a-z0-9-\+]+(\.[_a-z0-9-\+]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]+)$/i;
 
         if (!emailRegex.test(email)) {
@@ -71,7 +77,7 @@ export const Mixin = (superClass) => class extends superClass {
      * @param {Boolean} terms
      * @returns {Boolean}
      */
-    validateTerms (terms) {
+    validateTerms(terms) {
         if (terms) {
             this.set('errors.terms', null);
         } else {
@@ -95,7 +101,7 @@ export const Behaviour = {
             value: {}
         }
     },
-    validateUsername (username) {
+    validateUsername(username) {
         if (!username) {
             this.set('errors.username', "Username is required.");
             return false;
@@ -114,13 +120,19 @@ export const Behaviour = {
         this.set('errors.username', undefined);
         return true;
     },
-    validatePassword (password) {
+    validatePassword(password) {
         if (!password) {
             this.set('errors.password', "Password cannot be empty.");
             return false;
         }
+        const trimmedPassword = password.trim();
 
-        if (password.length < 6) {
+        if (trimmedPassword.includes(' ')) {
+            this.set('errors.password', "Password cannot contain spaces.");
+            return false;
+        }
+
+        if (trimmedPassword.length < 6) {
             this.set('errors.password', "Password must be at least 6 characters long.");
             return false;
         }
@@ -128,7 +140,7 @@ export const Behaviour = {
         this.set('errors.password', undefined);
         return true;
     },
-    validateEmail (email) {
+    validateEmail(email) {
         let emailRegex = /^[_a-z0-9-\+]+(\.[_a-z0-9-\+]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]+)$/i;
 
         if (!emailRegex.test(email)) {
@@ -144,7 +156,7 @@ export const Behaviour = {
      * @param {Boolean} terms
      * @returns {Boolean}
      */
-    validateTerms (terms) {
+    validateTerms(terms) {
         if (terms) {
             this.set('errors.terms', null);
         } else {
