@@ -6,7 +6,7 @@
   },
   "homepage": "https://github.com/KanoComponents/kwc-behaviours",
   "name": "@kano/kwc-behaviors",
-  "version": "3.0.0-beta.4",
+  "version": "3.0.0-beta.5",
   "resolutions": {
     "inherits": "2.0.3",
     "samsam": "1.1.3",
@@ -17,8 +17,8 @@
   "author": "Kano Computing",
   "license": "MIT",
   "dependencies": {
-    "platform": "^1.3.5",
-    "blueimp-md5": "^2.10"
+    "blueimp-md5": "^2.10",
+    "platform": "^1.3.5"
   },
   "devDependencies": {
     "wct-browser-legacy": "^0.0.1-pre.11"
