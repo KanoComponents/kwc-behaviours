@@ -46,21 +46,21 @@ export const Mixin = (superClass) => class extends superClass {
             this.set('errors.password', "Password cannot be empty.");
             return false;
         }
-        
-        password.trim();
-        if (password.includes(' ')) {
+        const trimmedPassword = password.trim();
+
+        if (trimmedPassword.includes(' ')) {
             this.set('errors.password', "Password cannot contain spaces.");
             return false;
         }
 
-        if (password.length < 6) {
+        if (trimmedPassword.length < 6) {
             this.set('errors.password', "Password must be at least 6 characters long.");
             return false;
         }
 
         this.set('errors.password', undefined);
         return true;
-    }
+    },
     validateEmail(email) {
         let emailRegex = /^[_a-z0-9-\+]+(\.[_a-z0-9-\+]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]+)$/i;
 
@@ -125,14 +125,14 @@ export const Behaviour = {
             this.set('errors.password', "Password cannot be empty.");
             return false;
         }
-        password.trim();
+        const trimmedPassword = password.trim();
 
-        if (password.includes(' ')) {
+        if (trimmedPassword.includes(' ')) {
             this.set('errors.password', "Password cannot contain spaces.");
             return false;
         }
 
-        if (password.length < 6) {
+        if (trimmedPassword.length < 6) {
             this.set('errors.password', "Password must be at least 6 characters long.");
             return false;
         }
